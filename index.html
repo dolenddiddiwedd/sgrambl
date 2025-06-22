@@ -132,7 +132,7 @@
 
   function passWord() {
     const correctWord = dailyWords[currentIndex];
-    document.getElementById("feedback").textContent = `⏩ Cywir! "${correctWord}" oedd y gair.`;
+    document.getElementById("feedback").textContent = `⏩ Wedi hepgor! "${correctWord}" oedd y gair.`;
     enableControls(false);
     currentIndex++;
     setTimeout(loadNextWord, 1200);
@@ -143,7 +143,7 @@
     .then(text => {
       words = text.trim().split('\n').filter(w => w.length > 0);
       if (words.length < 5) {
-        document.getElementById("dateInfo").textContent = "Need at least 5 words in words.txt!";
+        document.getElementById("dateInfo").textContent = "Rhaid i words.txt gael o leiaf 5 gair!";
         return;
       }
 document.getElementById("guessInput").addEventListener("keydown", function (e) {
