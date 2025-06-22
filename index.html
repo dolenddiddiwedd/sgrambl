@@ -17,7 +17,7 @@
   <div id="dateInfo">Yn llwytho...</div>
   <div id="roundInfo"></div>
   <div id="scrambled">Arhoswch...</div>
-  <input type="text" id="guessInput" placeholder="Dyfalwch y gair yma" disabled />
+  <input type="text" id="guessInput" placeholder="Dyfalwch y gair yma" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" disabled />
   <div>
     <button onclick="submitGuess()" disabled id="guessBtn">Dyfalu</button>
     <button onclick="passWord()" disabled id="passBtn">Hepgor</button>
@@ -75,7 +75,7 @@
 
   function showStats() {
     const { count, avg } = getHistoryStats();
-    document.getElementById("stats").textContent = `🗓️ Gemau chwaraewyd: ${count} | 📊 Sgôr cyfartalog: ${avg}`;
+    document.getElementById("stats").innerHTML = `🗓️ Gemau chwaraewyd: ${count} <br> <br> 📊 Sgôr cyfartalog: ${avg}`;
   }
 
   function loadNextWord() {
