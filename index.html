@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sgrambl</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    #scrambled { font-size: 2em; margin: 20px; }
+    input { padding: 10px; font-size: 1em; }
+    button { padding: 10px 20px; font-size: 1em; margin: 10px; }
+    #score, #feedback { font-weight: bold; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Sgrambl</h1>
+  <div id="dateInfo">Yn llwytho...</div>
+  <div id="roundInfo"></div>
+  <div id="scrambled">Arhoswch...</div>
+  <input type="text" id="guessInput" placeholder="Dyfalwch y gair yma" disabled />
+  <div>
+    <button onclick="submitGuess()" disabled id="guessBtn">Dyfalu</button>
+    <button onclick="passWord()" disabled id="passBtn">Hepgor</button>
+  </div>
+  <div id="feedback"></div>
+  <div id="score"></div>
+
+<script>
+  const todayKey = new Date().toISOString().slice(0, 10); // e.g., "2025-06-22"
+  let words = [];
+  let dailyWords = [];
+  let currentIndex = 0;
+  let score = 0;
+  let guessesLeft = 3;
+
+  function shuffle(word) {
+    return word.split('').sort(() => 0.5 - Math.random()).join('');
+  }
+
+  function hashDateToIndices(dateStr, totalWords, count = 5) {
+    const indices = new Set();
+    let seed = 0;
+    for (let i = 0; i < dateStr.length; i++) {
+      seed = (seed << 5) - seed + dateStr.charCodeAt(i);
+      seed |= 0;
+    }
+    let attempts = 0;
+    while (indices.size < count && attempts < 100) {
+      const hash = Math.abs((seed + attempts * 7919) % totalWords);
+      indices.add(hash);
+      attempts++;
+    }
+    return [...indices];
+  }
+
+  function enableControls(enabled) {
+    document.getElementById("guessInput").disabled = !enabled;
+    document.getElementById("guessBtn").disabled = !enabled;
+    document.getElementById("passBtn").disabled = !enabled;
+  }
+
+  function saveHistory(date, score) {
+    let history = JSON.parse(localStorage.getItem("history") || "{}");
+    history[date] = score;
+    localStorage.setItem("history", JSON.stringify(history));
+  }
+
+  function getHistoryStats() {
+    const history = JSON.parse(localStorage.getItem("history") || "{}");
+    const entries = Object.values(history);
+    const count = entries.length;
+    const avg = count > 0 ? (entries.reduce((a, b) => a + b, 0) / count).toFixed(2) : "0.00";
+    return { count, avg };
+  }
+
+  function showStats() {
+    const { count, avg } = getHistoryStats();
+    document.getElementById("stats").textContent = `🗓️ Gemau chwaraewyd: ${count} | 📊 Sgôr cyfartalog: ${avg}`;
+  }
+
+  function loadNextWord() {
+    if (currentIndex >= dailyWords.length) {
+      document.getElementById("scrambled").textContent = "🎉 Wedi gorffen!";
+      document.getElementById("feedback").textContent = `Eich sgôr: ${score} / 5`;
+      document.getElementById("score").textContent = "";
+      localStorage.setItem(`played-${todayKey}`, `${score}`);
+      saveHistory(todayKey, score);
+      showStats();
+      enableControls(false);
+      return;
+    }
+
+    const word = dailyWords[currentIndex];
+    let scrambled = shuffle(word);
+    while (scrambled === word) scrambled = shuffle(word);
+
+    guessesLeft = 3;
+    document.getElementById("roundInfo").textContent = `Rownd ${currentIndex + 1} o 5`;
+    document.getElementById("scrambled").textContent = scrambled;
+    document.getElementById("guessInput").value = "";
+    document.getElementById("feedback").textContent = "";
+    document.getElementById("score").textContent = `Sgôr: ${score}`;
+    enableControls(true);
+    document.getElementById("guessInput").focus();
+  }
+
+  function submitGuess() {
+    const guess = document.getElementById("guessInput").value.trim().toLowerCase();
+    if (!guess) return;
+
+    const correctWord = dailyWords[currentIndex];
+    if (guess === correctWord) {
+      score++;
+      document.getElementById("feedback").textContent = "✅ Cywir!";
+      enableControls(false);
+      currentIndex++;
+      setTimeout(loadNextWord, 1000);
+    } else {
+      guessesLeft--;
+      if (guessesLeft == 2) {
+        document.getElementById("feedback").textContent = `❌ Anghywir! ${guessesLeft} ddyfaliad ar ôl.`;
+      } else if (guessesLeft == 1) {
+        document.getElementById("feedback").textContent = `❌ Anghywir! ${guessesLeft} dyfaliad ar ôl.`; 
+      } else {
+        document.getElementById("feedback").textContent = `❌ Dim dyfaliadau ar ôl! "${correctWord}" oedd y gair.`;
+        enableControls(false);
+        currentIndex++;
+        setTimeout(loadNextWord, 1200);
+      }
+    }
+  }
+
+  function passWord() {
+    const correctWord = dailyWords[currentIndex];
+    document.getElementById("feedback").textContent = `⏩ Cywir! "${correctWord}" oedd y gair.`;
+    enableControls(false);
+    currentIndex++;
+    setTimeout(loadNextWord, 1200);
+  }
+
+  fetch('words.txt')
+    .then(response => response.text())
+    .then(text => {
+      words = text.trim().split('\n').filter(w => w.length > 0);
+      if (words.length < 5) {
+        document.getElementById("dateInfo").textContent = "Need at least 5 words in words.txt!";
+        return;
+      }
+document.getElementById("guessInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") submitGuess();
+});
+
+
+      const played = localStorage.getItem(`played-${todayKey}`);
+      if (played) {
+        document.getElementById("dateInfo").textContent = `Rydych eisoes wedi chwarae ar ${todayKey}`;
+        document.getElementById("scrambled").textContent = `Eich sgôr: ${played}`;
+        showStats();
+        return;
+      }
+
+      const indices = hashDateToIndices(todayKey, words.length, 5);
+      dailyWords = indices.map(i => words[i].trim().toLowerCase());
+
+      document.getElementById("dateInfo").textContent = `Her y dydd, ${todayKey}`;
+      showStats();
+      loadNextWord();
+    })
+    .catch(err => {
+      console.error("Error loading word list:", err);
+      document.getElementById("dateInfo").textContent = "Failed to load words.txt";
+    });
+
+  window.submitGuess = submitGuess;
+  window.passWord = passWord;
+</script>
+
+<div id="stats" style="margin-top: 30px; font-size: 1.1em; color: #333;"></div>
+
+</body>
+</html>
